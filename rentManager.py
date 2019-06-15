@@ -12,16 +12,29 @@ def do_transaction(account,contract,function,*args,**kwargs):
     
     print(contract.get_function_by_name(function))
     try:
-	    txn = contract.get_function_by_name(function)(*args).buildTransaction(kwargs)
-	    print("built transaction")
-	    signed = account.signTransaction(txn)
-	    print("signed transaction")
-	    tx_hash = w3.eth.sendRawTransaction(signed.rawTransaction)
-	    print("sent transaction")
-	    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
-	    return tx_receipt
-    except Exception:
-        print("Some error occured while executing transaction!!")
+    	kwargs['from'] = kwargs['frm']
+    	kwargs.pop('frm')
+    except:
+    	pass
+    print(args,"----",kwargs)
+    try:
+    	print("Here!")
+    	print(w3.fromWei(w3.eth.getBalance(account.address),'ether'))
+    	print(w3.fromWei(kwargs['value'],'ether'))
+    	print("there")
+    except:
+    	pass
+    # try:
+    txn = contract.get_function_by_name(function)(*args).buildTransaction(kwargs)
+    print("built transaction")
+    signed = account.signTransaction(txn)
+    print("signed transaction")
+    tx_hash = w3.eth.sendRawTransaction(signed.rawTransaction)
+    print("sent transaction")
+    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    return tx_receipt
+    # except Exception:
+    #     print("Some error occured while executing transaction!!")
     # Wait for transaction to be mined...
 
 def deploy_contract(account, contract_interface, *args, **kwargs):
@@ -54,7 +67,7 @@ def deploy_contract(account, contract_interface, *args, **kwargs):
 #     return w3.eth.getTransactionCount(account)
 
 
-url = "http://127.0.0.1:7545"
+url = "http://127.0.0.1:8545"
 w3 = connect(url)
 gas = 3000000
 gasPrice = w3.eth.gasPrice
@@ -65,11 +78,15 @@ gasPrice = w3.eth.gasPrice
 contract_interface = {"bin": json.load(open('rentAgreement.bin')), "abi": json.load(open('rentAgreement.abi'))}
 mod_contract_interface = {"bin" : json.load(open('modifiedRentAgreement.bin')), "abi": json.load(open('modifiedRentAgreement.abi'))}
 
-landlordprivateKey = "541927bd3d1c1b23ecc3781c92458687a61867e8ee701d38311aa7f6f7cec1cd"
-tenantprivateKey = "ae5d7dbafa62274248b8b2467c4b6e7ba36407f0224736926204059b3b25935f"
+landlordprivateKey = "0x32f9f82ea7686b8dfc495055d698659c2b80666488e743407074b6de87e37da1"
+tenantprivateKey = "0x788024e322ae06281a2a1613e2ac262f3ebe6d2f440577a64b58525a45e4fe8b"
 
 landlord = w3.eth.account.privateKeyToAccount(landlordprivateKey)
 tenant = w3.eth.account.privateKeyToAccount(tenantprivateKey)
+
+m = dict()
+m[landlord.address] = ('landlord', w3.eth.getBalance(landlord.address))
+m[tenant.address] = ('tenant', w3.eth.getBalance(tenant.address))
 
 print("-------Starting renting contract-------")
 menu = '''
@@ -84,7 +101,7 @@ menu = '''
 
 class RentalAgreementManager:
 	def __init__(self):
-		self.address = deploy_contract(landlord,contract_interface,20,"Junaid",
+		self.address = deploy_contract(landlord,contract_interface,w3.toWei(5,'ether'),"Junaid",
 			frm=landlord.address,
 			nonce= w3.eth.getTransactionCount(landlord.address),
 			gas=gas,
@@ -92,7 +109,7 @@ class RentalAgreementManager:
 		self.contract = w3.eth.contract(address=self.address, abi=contract_interface['abi'])
 
 	def deploy_another(self, *args, **kwargs):
-		new_address = deploy_contract(landlord,mod_contract_interface,20,5,"NewHouse",
+		new_address = deploy_contract(landlord,mod_contract_interface,w3.toWei(5,'ether'),w3.toWei(1,'ether'),"NewHouse",
 			frm=landlord.address,
 			nonce=w3.eth.getTransactionCount(landlord.address),
 			gas=gas,
@@ -126,13 +143,14 @@ class RentalAgreementManager:
 		prev = call_function(self.contract,"getPrev")
 		print(prev)
 		if prev != '0x0000000000000000000000000000000000000000':
-			value = 25
+			value = 6
 		else:
-			value = 20
-		print(value)
+			value = 5
+		print(w3.fromWei(w3.toWei(value,'ether'), 'ether'))
 		tx_receipt = do_transaction(tenant,self.contract, "payRent",
 			nonce=w3.eth.getTransactionCount(tenant.address),
-			value=value,
+			frm=tenant.address,
+			value=w3.toWei(value,'ether'),
 			gas=gas,
 			gasPrice=gasPrice)
 
@@ -156,6 +174,9 @@ class RentalAgreementManager:
 rental = RentalAgreementManager()
 while True:
 	print(menu)
+	m[landlord.address] = ('landlord', w3.fromWei(w3.eth.getBalance(landlord.address),'ether'))
+	m[tenant.address] = ('tenant', w3.fromWei(w3.eth.getBalance(tenant.address),'ether'))
+	print(m)
 	choice = int(input())
 	if choice == 1:
 		rental.confirmAgreement()
