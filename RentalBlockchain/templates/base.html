@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE HTML>
+<html>
+	<head>
+		{% block title %}<title>Rental Agreement App</title>{% endblock title %}
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="{% static 'assets/css/main.css' %}" />
+	</head>
+	<body class="landing">
+		<!-- Header -->
+		{% block navbar %}
+			
+		{% endblock navbar %}
+		<!-- Banner -->
+			<section id="banner">
+				{% block banner %}
+				{% endblock banner %}
+			</section>
+
+			<!-- One -->
+			
+				<section id="one" class="wrapper style1">
+				{% block section_one %}
+				{% endblock %}
+				</section>
+				
+
+			<!-- Two -->
+				
+				<section id="two" class="wrapper style2 special">
+					{% block section_two %}
+					{% endblock section_two %}
+				</section>
+
+			<script src="{% static 'assets/js/jquery.min.js' %}"></script>
+			<script src="{% static 'assets/js/skel.min.js' %}"></script>
+			<script src="{% static 'assets/js/util.js' %}"></script>
+			<script src="{% static 'assets/js/main.js' %}"></script>
+			<script src="{% static 'assets/js/jquery-3.3.1.min.js' %}"></script>
+	</body>
+</html>

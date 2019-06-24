@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block navbar %}
+	<header id="header" class="alt">
+				<h1><strong><a href="index.html">Blockchain Based</a></strong> Rental Agreement Manager</h1>
+				<nav id="nav">
+					<ul>
+						{% if not user.is_authenticated %}
+		                    <li class="active"><a href="{% url 'signup' %}">Sign Up</a></li>
+		                    <li class="active"><a href="{% url 'login' %}">Sign In</a></li>
+			            {% endif %}
+			            {% if user.is_authenticated %}
+    						<li><a href="{% url 'buyerseller:upload' %}" %}>Upload</a></li>
+							<!-- {% if user.is_superuser %}
+								<li><a href="generic.html">Assign Roles</a></li>
+							{% endif%} -->
+		                    <li class="active"><a href="{% url 'logout' %}">Sign Out</a></li>
+			            {% endif %}
+					</ul>
+				</nav>
+			</header>
+
+			<a href="#menu" class="navPanelToggle"><span class="fa fa-bars"></span></a>
+{% endblock navbar %}
+{%block section_one%}
+		<div class="container 100%">
+		<div class="row 200%">
+			<div class="6u 12u$(medium)">
+				{%if user.is_authenticated %}
+				<header class="major">
+					<h2>Available contracts to deploy</h2>
+					<p>For user - {{user.username}} Balance - {{ user.balance }} </p>
+				</header>
+			</div>
+			<div class="6u$ 12u$(medium)">
+			<table border="1">
+		      <thead>
+		        <tr>
+		          <th>Contract</th>
+		          <th>Action</th>
+		        </tr>
+		      </thead>
+		      <tbody>
+		        {% for upload in uploads %}
+		          <tr>
+		            <td> {{ upload.name }}</td>
+		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:deploy' upload.id %}" style="color: white">Deploy</a></button> </td>
+		          </tr>
+		        {% endfor %}
+		      </tbody>
+
+
+		      <tbody>
+		        {% for unconfirmed_contract in unconfirmed_contracts %}
+		          <tr>
+		            <td> {{ unconfirmed_contract.id }}</td>
+		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:confirm-agreement' unconfirmed_contract.id %}" style="color: white">Confirm Agreement</a></button> </td>
+		          </tr>
+		        {% endfor %}
+		      </tbody>
+
+		      <tbody>
+		        {% for bought_contract in bought_contracts %}
+		          <tr>
+		            <td> {{ bought_contract.id }}</td>
+		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:pay' bought_contract.id %}" style="color: white">Pay</a></button> </td>
+		          </tr>
+		        {% endfor %}
+		      </tbody>
+
+		      <tbody>
+		        {% for sold_contract in sold_contracts %}
+		          <tr>
+		            <td> {{ sold_contract.id }}</td>
+		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:terminate' sold_contract.id %}" style="color: white">Terminate Agreement</a></button> </td>
+		            {% if sold_contract.tenant %}
+			            {% if sold_contract.next%}
+			            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:shift_next' sold_contract.id  %}" style="color: white">Next</a></button> </td>
+			            {% else %}
+			            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:deploy_next' sold_contract.id %}" style="color: white">Next</a></button> </td>
+			            {% endif %}
+			        {% endif %}
+
+		            {% if sold_contract.prev %}
+		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:shift_previous'  sold_contract.id %}" style="color: white">Previous</a></button> </td>
+					{% endif %}
+		          </tr>
+		        {% endfor %}
+		      </tbody>
+
+  		      <tbody>
+		        {% for terminated_contract in terminated_contracts %}
+		          <tr>
+		            <td> {{ terminated_contract.id }}</td>
+		            <td> Terminated contract </td>
+		          </tr>
+		        {% endfor %}
+		      </tbody>
+
+
+		    </table>
+		    {% endif %}
+		    {% if not user.is_authenticated %}
+		    	<header class="major">
+					<h2>Login required</h2>
+					<p> Please login to see your rented and bought contracts </p>
+				</header>
+		    {% endif %}
+			</div>
+		</div>
+	</div>
+{% endblock section_one %}

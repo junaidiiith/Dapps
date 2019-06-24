@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block section_one %}
+    <div class="container">
+        <div class="row">
+            <h2>Upload a new contract</h2>
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Upload</button>
+              </form>
+        </div>
+    </div>
+{% endblock section_one %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block section_one%}
+<div class="container 100%">
+        <div>
+        <h1><strong> Upload a new contract or deploy existing </strong></h1>
+        </div>
+        <div class="row 200%">
+            <div class="6u$ 12u$(medium)">
+            <table border="1">
+              <thead>
+                <tr>
+                  <th>Contract</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for upload in uploads %}
+                  <tr>
+                    <td> {{ upload.name }}</td>
+                    <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:deploy_with_confirmation' upload.id contract.id %}" style="color: white">Deploy</a></button> </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock section_one%}
+
+{% block section_two %}
+    <div class="container">
+        <div class="row">
+            <h2>Upload a new contract</h2>
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Upload</button>
+              </form>
+        </div>
+    </div>
+{% endblock section_two %}
