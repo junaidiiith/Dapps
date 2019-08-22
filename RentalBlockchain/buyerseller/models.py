@@ -12,6 +12,7 @@ class Stakeholder(Model):
 	type = models.IntegerField(choices=Choices)
 
 class Contract(Model):
+	name = models.CharField(max_length=255, blank=True)
 	address = models.CharField(max_length=50)
 	abi = JSONField()
 	current = models.IntegerField(choices=States)

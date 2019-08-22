@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load widget_tweaks %}
+{% block refresh %}<meta http-equiv="refresh" content="5">{% endblock refresh %}
 
 {% block navbar %}
 	<header id="header" class="alt">
@@ -20,11 +21,10 @@
 					</ul>
 				</nav>
 			</header>
-
 			<a href="#menu" class="navPanelToggle"><span class="fa fa-bars"></span></a>
 {% endblock navbar %}
 {%block section_one%}
-		<div class="container 100%">
+		<div class="container 100%" id="dashboard">
 		<div class="row 200%">
 			<div class="6u 12u$(medium)">
 				{%if user.is_authenticated %}
@@ -54,7 +54,7 @@
 		      <tbody>
 		        {% for unconfirmed_contract in unconfirmed_contracts %}
 		          <tr>
-		            <td> {{ unconfirmed_contract.id }}</td>
+		            <td> {{ unconfirmed_contract.name }}</td>
 		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:confirm-agreement' unconfirmed_contract.id %}" style="color: white">Confirm Agreement</a></button> </td>
 		          </tr>
 		        {% endfor %}
@@ -63,7 +63,7 @@
 		      <tbody>
 		        {% for bought_contract in bought_contracts %}
 		          <tr>
-		            <td> {{ bought_contract.id }}</td>
+		            <td> {{ bought_contract.name }}</td>
 		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:pay' bought_contract.id %}" style="color: white">Pay</a></button> </td>
 		          </tr>
 		        {% endfor %}
@@ -72,7 +72,7 @@
 		      <tbody>
 		        {% for sold_contract in sold_contracts %}
 		          <tr>
-		            <td> {{ sold_contract.id }}</td>
+		            <td> {{ sold_contract.name }}</td>
 		            <td><button type="button" class="btn btn-default"><a href="{% url 'buyerseller:terminate' sold_contract.id %}" style="color: white">Terminate Agreement</a></button> </td>
 		            {% if sold_contract.tenant %}
 			            {% if sold_contract.next%}
@@ -92,7 +92,7 @@
   		      <tbody>
 		        {% for terminated_contract in terminated_contracts %}
 		          <tr>
-		            <td> {{ terminated_contract.id }}</td>
+		            <td> {{ terminated_contract.name }}</td>
 		            <td> Terminated contract </td>
 		          </tr>
 		        {% endfor %}

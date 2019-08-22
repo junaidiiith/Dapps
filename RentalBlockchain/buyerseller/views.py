@@ -118,7 +118,7 @@ def deploy(request, pk):
 			contract_interface = get_interface(storage.open(document.bytecode, mode='rb'), storage.open(document.abi, mode='rb'))
 			contract_address = deploy_contract(account, contract_interface, w3.toWei(int(form.cleaned_data['_rent']), 'ether'), form.cleaned_data['_house'], frm=account.address,
 			nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
-			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=json.load(storage.open(document.abi)))
+			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=json.load(storage.open(document.abi)), name=document.name)
 			contract.save()
 			print("Contract saved!")
 		else:
@@ -228,7 +228,7 @@ def deploy_with_confirmation(request, doc_id, c_id):
 			form.cleaned_data['_house'], 
 			frm=account.address, nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
 
-			contract = Contract(address=contract_address, current=True, landlord=landlord, tenant=tenant, abi=json.load(storage.open(document.abi)))
+			contract = Contract(address=contract_address, current=True, landlord=landlord, abi=json.load(storage.open(document.abi)), name=document.name)
 			contract.save()
 			print("Contract saved!")
 
@@ -247,11 +247,13 @@ def deploy_with_confirmation(request, doc_id, c_id):
 
 			tenant_account = w3.eth.account.privateKeyToAccount(tenant.user.private_key)
 
-			do_transaction(tenant_account,new_contract,"confirmAgreement",
-			nonce=w3.eth.getTransactionCount(tenant_account.address),
-			frm=tenant_account.address,
-			gas=gas,
-			gasPrice=gasPrice)
+			# add previous transactions list code
+
+			# do_transaction(tenant_account,new_contract,"confirmAgreement",
+			# nonce=w3.eth.getTransactionCount(tenant_account.address),
+			# frm=tenant_account.address,
+			# gas=gas,
+			# gasPrice=gasPrice)
 
 			previous_contract.current = 2
 			previous_contract.save()
