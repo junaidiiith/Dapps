@@ -11,11 +11,13 @@ Download Mysql and start the Mysql Server
 Login to Mysql client
 Create a user named *dapp* with password *dapp*
 
-**create user 'dapp'@localhost' identified by 'dapp';
-grant all privileges on dapp.* to 'dapp'@'localhost';**
+`create user 'dapp'@localhost' identified by 'dapp';`
+`grant all privileges on dapp.* to 'dapp'@'localhost';`
+
 Exit
+
 Login using new user "dapp" and create database dapp
-**create database dapp**
+`create database dapp`
 
 Download ganache software from [here](https://github.com/trufflesuite/ganache/releases/download/v2.3.0-beta.2/Ganache-2.3.0-beta.2-win-setup.exe)
 Open ganache and start the server
@@ -28,7 +30,7 @@ Clone the repository and activate the virutal environment by using the command
 
 Now to create the database tables and starting the application server run the following commands
 
-**python manage.py makemigrations
+`python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
-python manager.py runserver**
+python manager.py runserver`
