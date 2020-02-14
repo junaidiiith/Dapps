@@ -2,17 +2,14 @@
 
 #Rental Agreement Manager for Blockchain
 
-#### Technologies required
-
-
-Dependencies
+#### Dependencies
 
 Install MySql, IPFSClient, Ganache
 Remaining dependencies are present in the virtual environment.
 
 Download Mysql and start the Mysql Server
 Login to Mysql client
-Create a user named "dapp" with password "dapp"
+Create a user named *dapp* with password *dapp*
 
 **create user 'dapp'@localhost' identified by 'dapp';
 grant all privileges on dapp.* to 'dapp'@'localhost';**
