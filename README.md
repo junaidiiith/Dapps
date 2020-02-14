@@ -30,7 +30,7 @@ Clone the repository and activate the virutal environment by using the command
 
 Now to create the database tables and starting the application server run the following commands
 
-`python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-python manager.py runserver`
+`python manage.py makemigrations`
+`python manage.py migrate`
+`python manage.py createsuperuser`
+`python manager.py runserver`
