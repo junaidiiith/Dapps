@@ -101,7 +101,7 @@ WSGI_APPLICATION = 'RentalBlockchain.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'buyerseller',
+        'NAME': 'dapp',
         'USER': 'dapp',
         'PASSWORD': 'dapp',
         'HOST': 'localhost',

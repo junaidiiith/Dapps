@@ -8,10 +8,14 @@ from buyerseller.forms import CustomForm
 from buyerseller.models import *
 from users.models import Profile
 from RentalDapp.web3Connection import *
-from RentalDapp.rentManager import *
+from RentalDapp.rentalManager import *
 
 
-url = "http://127.0.0.1:8545"
+url = "http://127.0.0.1:7545"
+
+def connect(url):
+    return Web3(Web3.HTTPProvider(url))
+
 w3 = connect(url)
 gas = 3000000
 gasPrice = w3.eth.gasPrice
@@ -23,9 +27,9 @@ def get_owned(user):
 	for contract in contracts:
 		if contract.tenant:
 			c = w3.eth.contract(address=contract.address, abi=contract.abi)
-			if c.call().getNext() != '0x0000000000000000000000000000000000000000':
+			if c.caller().getNext() != '0x0000000000000000000000000000000000000000':
 				contract.next = True
-			if c.call().getPrev() != '0x0000000000000000000000000000000000000000':
+			if c.caller().getPrev() != '0x0000000000000000000000000000000000000000':
 				contract.prev = True
 		modified_contracts.append(contract)
 
@@ -87,10 +91,12 @@ def upload(request):
 
 def deploy(request, pk):
 	document = get_object_or_404(Document, id=pk)
-	storage = DefaultStorage()
-	functions = json.load(storage.open(document.abi, mode='rb'))
+	# print(document.abi.read())
+	abi = json.loads(document.abi.read())
+	bytecode = json.loads(document.bytecode.read())
 	fields = list()
-	for function in functions:
+	# print(functions)
+	for function in abi:
 		if function['type'] == 'constructor':
 			fields = function['inputs']
 			break
@@ -115,10 +121,10 @@ def deploy(request, pk):
 			account = w3.eth.account.privateKeyToAccount(profile.private_key)
 
 			# print(contract_interface, account)
-			contract_interface = get_interface(storage.open(document.bytecode, mode='rb'), storage.open(document.abi, mode='rb'))
+			contract_interface = {"abi": abi, "bin": bytecode}
 			contract_address = deploy_contract(account, contract_interface, w3.toWei(int(form.cleaned_data['_rent']), 'ether'), form.cleaned_data['_house'], frm=account.address,
 			nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
-			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=json.load(storage.open(document.abi)), name=document.name)
+			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=abi, name=document.name)
 			contract.save()
 			print("Contract saved!")
 		else:
@@ -134,8 +140,8 @@ def confirmAgreement(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
 	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
 	profile = Profile.objects.get(user=request.user)
-	print(profile)
-
+	stakeholder = Stakeholder(user=profile, type=2)
+	stakeholder.save()
 	account = w3.eth.account.privateKeyToAccount(profile.private_key)
 
 	tx_reciept = do_transaction(account, contract, "confirmAgreement",
@@ -143,20 +149,13 @@ def confirmAgreement(request, pk):
 			frm=account.address,
 			gas=gas,
 			gasPrice=gasPrice)
+			# ,value=contract.caller().deposit())
 
 	print("Agreement Confirmed! with: ", tx_reciept)
-
-	try:
-		stakeholder = Stakeholder.objects.filter(user=profile, type=2)[0]
-		# print("stakeholder found")
-	except:
-		stakeholder = Stakeholder(user=profile, type=2)
-		stakeholder.save()
 
 	contract_.tenant = stakeholder
 	contract_.save()
 
-	print("Contract updated!")
 	return redirect('home')
 
 
@@ -164,12 +163,11 @@ def pay(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
 	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
 	profile = Profile.objects.get(user=request.user)
-	print(profile)
-	value = contract.call().rent()
+	value = contract.caller().rent()
 	try:
-		value += contract.call().maintenence()
+		value += contract.caller().maintenence()
 	except:
-		pass
+		value += 0
 	account = w3.eth.account.privateKeyToAccount(profile.private_key)
 	tx_receipt = do_transaction(account, contract, "payRent",
 			nonce=w3.eth.getTransactionCount(account.address),
@@ -179,6 +177,7 @@ def pay(request, pk):
 			gasPrice=gasPrice)
 	print(tx_receipt)
 	print("Payment received!")
+
 	return redirect('home')
 
 
@@ -186,7 +185,6 @@ def terminateContract(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
 	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
 	profile = Profile.objects.get(user=request.user)
-	print(profile)
 
 	account = w3.eth.account.privateKeyToAccount(profile.private_key)
 	tx_reciept = do_transaction(account, contract, "terminateContract",
@@ -206,10 +204,11 @@ def deploy_with_confirmation(request, doc_id, c_id):
 	landlord = previous_contract.landlord
 
 	document = get_object_or_404(Document, id=doc_id)
-	storage = DefaultStorage()
-	functions = json.load(storage.open(document.abi, mode='rb'))
+	abi = json.loads(document.abi.read())
+	bytecode = json.loads(document.bytecode.read())
+	
 	fields = list()
-	for function in functions:
+	for function in abi:
 		if function['type'] == 'constructor':
 			fields = function['inputs']
 			break
@@ -223,12 +222,12 @@ def deploy_with_confirmation(request, doc_id, c_id):
 			account = w3.eth.account.privateKeyToAccount(landlord.user.private_key)
 
 			# print(contract_interface, account)
-			contract_interface = get_interface(storage.open(document.bytecode, mode='rb'), storage.open(document.abi, mode='rb'))
+			contract_interface = {"abi": abi, "bin": bytecode}
 			contract_address = deploy_contract(account, contract_interface, w3.toWei(int(form.cleaned_data['_rent']), 'ether'), w3.toWei(int(form.cleaned_data['_maintenence']), 'ether'),
 			form.cleaned_data['_house'], 
 			frm=account.address, nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
 
-			contract = Contract(address=contract_address, current=True, landlord=landlord, abi=json.load(storage.open(document.abi)), name=document.name)
+			contract = Contract(address=contract_address, current=True, landlord=landlord, abi=abi, name=document.name)
 			contract.save()
 			print("Contract saved!")
 
@@ -248,12 +247,6 @@ def deploy_with_confirmation(request, doc_id, c_id):
 			tenant_account = w3.eth.account.privateKeyToAccount(tenant.user.private_key)
 
 			# add previous transactions list code
-
-			# do_transaction(tenant_account,new_contract,"confirmAgreement",
-			# nonce=w3.eth.getTransactionCount(tenant_account.address),
-			# frm=tenant_account.address,
-			# gas=gas,
-			# gasPrice=gasPrice)
 
 			previous_contract.current = 2
 			previous_contract.save()
@@ -287,7 +280,7 @@ def shift_next(request, pk):
 	contract_.current = 2
 	contract_.save()
 	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
-	new_contract = Contract.objects.filter(address=contract.call().getNext())[0]
+	new_contract = Contract.objects.filter(address=contract.caller().getNext())[0]
 	new_contract.current = 1
 	new_contract.save()
 	return redirect('home')
@@ -297,7 +290,26 @@ def shift_prev(request, pk):
 	contract_.current = 2
 	contract_.save()
 	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
-	new_contract = Contract.objects.filter(address=contract.call().getPrev())[0]
+	new_contract = Contract.objects.filter(address=contract.caller().getPrev())[0]
 	new_contract.current = 1
 	new_contract.save()
 	return redirect('home')
+
+
+
+
+def modify(request, old_contract, new_contract, *args, **kwargs):
+	profile = Profile.objects.get(user=request.user)
+	account = profile.address
+	do_transaction(account, old_contract,"setNext", contract.address,
+			nonce=w3.eth.getTransactionCount(account.address),
+			gas=gas,
+			gasPrice=gasPrice)
+			
+	do_transaction(account,new_contract,"setPrev", previous_contract.address,
+			nonce=w3.eth.getTransactionCount(account.address),
+			gas=gas,
+			gasPrice=gasPrice)
+	deploy(account, new_contract)
+	
+
