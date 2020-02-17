@@ -4,11 +4,13 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.files.storage import DefaultStorage
 import json
+from RentalBlockchain.settings import *
 from buyerseller.forms import CustomForm
 from buyerseller.models import *
 from users.models import Profile
 from RentalDapp.web3Connection import *
 from RentalDapp.rentalManager import *
+from RentalDapp.ipfs_utils import *
 
 
 url = "http://127.0.0.1:7545"
@@ -21,12 +23,16 @@ gas = 3000000
 gasPrice = w3.eth.gasPrice
 
 
+client = IPFSCLient()
+
+
 def get_owned(user):
 	contracts = [contract for contract in Contract.objects.all() for stakeholder in Stakeholder.objects.all() if stakeholder.user == user and stakeholder.type == 1 and contract.landlord == stakeholder and contract.current == 1]
 	modified_contracts = list()
 	for contract in contracts:
 		if contract.tenant:
-			c = w3.eth.contract(address=contract.address, abi=contract.abi)
+
+			c = w3.eth.contract(address=contract.address, abi=get_file_from_ipfs_hash(contract.abi))
 			if c.caller().getNext() != '0x0000000000000000000000000000000000000000':
 				contract.next = True
 			if c.caller().getPrev() != '0x0000000000000000000000000000000000000000':
@@ -78,7 +84,10 @@ def upload(request):
     	form = DocumentForm(request.POST, request.FILES)
     	if form.is_valid():
     		print('saving form here')
-    		form.save()
+    		bin_hash = client.add_file(request.FILES['bytecode'])
+    		abi_hash = client.add_file(request.FILES['abi'])
+    		doc = Document(name=form.cleaned_data['name'], bytecode=bin_hash, abi=abi_hash)
+    		doc.save()
     		return redirect('home')
     	else:
     		return HttpResponse('Invalid form')
@@ -88,12 +97,15 @@ def upload(request):
 		'form': form
 	})
 
+def get_file_from_ipfs_hash(hs):
+	client.get_file(hs)
+	return json.loads(open(BASE_DIR + "/" + hs).read())
 
 def deploy(request, pk):
 	document = get_object_or_404(Document, id=pk)
 	# print(document.abi.read())
-	abi = json.loads(document.abi.read())
-	bytecode = json.loads(document.bytecode.read())
+	abi = get_file_from_ipfs_hash(document.abi)
+	bytecode = get_file_from_ipfs_hash(document.bytecode)
 	fields = list()
 	# print(functions)
 	for function in abi:
@@ -124,7 +136,7 @@ def deploy(request, pk):
 			contract_interface = {"abi": abi, "bin": bytecode}
 			contract_address = deploy_contract(account, contract_interface, w3.toWei(int(form.cleaned_data['_rent']), 'ether'), form.cleaned_data['_house'], frm=account.address,
 			nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
-			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=abi, name=document.name)
+			contract = Contract(address=contract_address, current=True, landlord=stakeholder, abi=document.abi, name=document.name)
 			contract.save()
 			print("Contract saved!")
 		else:
@@ -138,7 +150,7 @@ def deploy(request, pk):
 
 def confirmAgreement(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
-	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
+	contract = w3.eth.contract(address=contract_.address, abi=get_file_from_ipfs_hash(contract_.abi))
 	profile = Profile.objects.get(user=request.user)
 	stakeholder = Stakeholder(user=profile, type=2)
 	stakeholder.save()
@@ -161,7 +173,7 @@ def confirmAgreement(request, pk):
 
 def pay(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
-	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
+	contract = w3.eth.contract(address=contract_.address, abi=get_file_from_ipfs_hash(contract_.abi))
 	profile = Profile.objects.get(user=request.user)
 	value = contract.caller().rent()
 	try:
@@ -183,7 +195,7 @@ def pay(request, pk):
 
 def terminateContract(request, pk):
 	contract_ = get_object_or_404(Contract,id=pk)
-	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
+	contract = w3.eth.contract(address=contract_.address, abi=get_file_from_ipfs_hash(contract_.abi))
 	profile = Profile.objects.get(user=request.user)
 
 	account = w3.eth.account.privateKeyToAccount(profile.private_key)
@@ -204,9 +216,9 @@ def deploy_with_confirmation(request, doc_id, c_id):
 	landlord = previous_contract.landlord
 
 	document = get_object_or_404(Document, id=doc_id)
-	abi = json.loads(document.abi.read())
-	bytecode = json.loads(document.bytecode.read())
-	
+	abi = get_file_from_ipfs_hash(document.abi)
+	bytecode = get_file_from_ipfs_hash(document.bytecode)
+	print("BIN HASH", document.abi, document.bytecode)
 	fields = list()
 	for function in abi:
 		if function['type'] == 'constructor':
@@ -227,12 +239,12 @@ def deploy_with_confirmation(request, doc_id, c_id):
 			form.cleaned_data['_house'], 
 			frm=account.address, nonce=w3.eth.getTransactionCount(account.address), gas=gas, gasPrice=gasPrice)
 
-			contract = Contract(address=contract_address, current=True, landlord=landlord, abi=abi, name=document.name)
+			contract = Contract(address=contract_address, current=True, landlord=landlord, abi=document.abi, name=document.name)
 			contract.save()
 			print("Contract saved!")
 
-			old_contract = w3.eth.contract(address=previous_contract.address, abi=previous_contract.abi)
-			new_contract = w3.eth.contract(address=contract.address, abi=contract.abi)
+			old_contract = w3.eth.contract(address=previous_contract.address, abi=get_file_from_ipfs_hash(previous_contract.abi))
+			new_contract = w3.eth.contract(address=contract.address, abi=get_file_from_ipfs_hash(contract.abi))
 
 			do_transaction(account, old_contract,"setNext", contract.address,
 			nonce=w3.eth.getTransactionCount(account.address),
@@ -264,8 +276,11 @@ def deploy_next(request, pk):
     if request.method == 'POST':
     	form = DocumentForm(request.POST, request.FILES)
     	if form.is_valid():
-    		print('saving form here')
-    		doc = form.save()
+    		bin_hash = client.add_file(request.FILES['bytecode'])
+    		abi_hash = client.add_file(request.FILES['abi'])
+    		
+    		doc = Document(name=form.cleaned_data['name'], bytecode=bin_hash, abi=abi_hash)
+    		doc.save()
     		print(doc.id, doc.abi, contract.id)
     	else:
     		return HttpResponse('Invalid form')
@@ -279,7 +294,7 @@ def shift_next(request, pk):
 	contract_ = get_object_or_404(Contract, id=pk)
 	contract_.current = 2
 	contract_.save()
-	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
+	contract = w3.eth.contract(address=contract_.address, abi=get_file_from_ipfs_hash(contract_.abi))
 	new_contract = Contract.objects.filter(address=contract.caller().getNext())[0]
 	new_contract.current = 1
 	new_contract.save()
@@ -289,7 +304,7 @@ def shift_prev(request, pk):
 	contract_ = get_object_or_404(Contract, id=pk)
 	contract_.current = 2
 	contract_.save()
-	contract = w3.eth.contract(address=contract_.address, abi=contract_.abi)
+	contract = w3.eth.contract(address=contract_.address, abi=get_file_from_ipfs_hash(contract_.abi))
 	new_contract = Contract.objects.filter(address=contract.caller().getPrev())[0]
 	new_contract.current = 1
 	new_contract.save()

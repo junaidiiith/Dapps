@@ -1,10 +1,10 @@
 from django import forms
 from buyerseller.models import Document
 
-class DocumentForm(forms.ModelForm):
-    class Meta:
-        model = Document
-        fields = ('name', 'bytecode', 'abi', )
+class DocumentForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    bytecode = forms.FileField()
+    abi = forms.FileField()
 
 class CustomForm(forms.Form):  
 	def __init__(self, fields, *args, **kwargs):  

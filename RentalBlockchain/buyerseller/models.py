@@ -23,6 +23,6 @@ class Contract(models.Model):
 
 class Document(models.Model):
     name = models.CharField(max_length=255, blank=True)
-    bytecode = models.FileField(upload_to='media/')
-    abi = models.FileField(upload_to='media/')
+    bytecode = models.CharField(max_length=47)
+    abi = models.CharField(max_length=47)
     uploaded_at = models.DateTimeField(auto_now_add=True)
